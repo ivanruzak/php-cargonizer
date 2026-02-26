@@ -13,8 +13,12 @@ abstract class ObjectsWrapper implements \Iterator
   protected $array = [];
 
   /**
-   * {@inheritdoc}
+   * Creates a new iterator from an ArrayObject instance.
+   *
+   * @return \ArrayIterator
+   *   An array iterator.
    */
+  #[\ReturnTypeWillChange]
   public function getIterator() {
     return new \ArrayIterator($this->array);
   }
@@ -36,6 +40,7 @@ abstract class ObjectsWrapper implements \Iterator
   /**
    * {@inheritdoc}
    */
+  #[\ReturnTypeWillChange]
   public function rewind() {
     return reset($this->array);
   }
@@ -43,6 +48,7 @@ abstract class ObjectsWrapper implements \Iterator
   /**
    * {@inheritdoc}
    */
+  #[\ReturnTypeWillChange]
   public function current() {
     return current($this->array);
   }
@@ -50,6 +56,7 @@ abstract class ObjectsWrapper implements \Iterator
   /**
    * {@inheritdoc}
    */
+  #[\ReturnTypeWillChange]
   public function key() {
     return key($this->array);
   }
@@ -57,6 +64,7 @@ abstract class ObjectsWrapper implements \Iterator
   /**
    * {@inheritdoc}
    */
+  #[\ReturnTypeWillChange]
   public function next() {
     return next($this->array);
   }
@@ -64,6 +72,7 @@ abstract class ObjectsWrapper implements \Iterator
   /**
    * {@inheritdoc}
    */
+  #[\ReturnTypeWillChange]
   public function valid() {
     return key($this->array) !== null;
   }

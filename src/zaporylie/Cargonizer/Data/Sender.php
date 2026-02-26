@@ -196,8 +196,10 @@ class Sender extends Address {
 
   /**
    * {@inheritdoc}
+   * @param \SimpleXMLElement $xml
+   * @param \zaporylie\Cargonizer\Data\AddressInterface|null $address
    */
-  public static function fromXML(\SimpleXMLElement $xml) {
+  public static function fromXML(\SimpleXMLElement $xml, AddressInterface $address = NULL) {
     $sender = new Sender();
     parent::fromXML($xml, $sender);
     $sender->setPlan(Plan::fromXML($xml->{'plan'}));
