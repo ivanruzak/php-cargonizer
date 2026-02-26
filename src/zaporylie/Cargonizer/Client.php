@@ -3,7 +3,8 @@
 namespace zaporylie\Cargonizer;
 
 use Http\Client\Exception\RequestException;
-use Http\Discovery\MessageFactoryDiscovery;
+use Http\Discovery\Psr17FactoryDiscovery;
+use Psr\Http\Client\ClientInterface;
 
 /**
  * Class Client
@@ -12,20 +13,31 @@ use Http\Discovery\MessageFactoryDiscovery;
  */
 abstract class Client {
 
-  protected $resource = NULL;
-  protected $method = NULL;
+  protected $resource = null;
+  protected $method = null;
 
   /**
-   * @var \Http\Client\HttpAsyncClient|\Http\Client\HttpClient
+   * PSR-18 HTTP client.
+   *
+   * @var \Psr\Http\Client\ClientInterface
    */
-  protected $client;
+  protected ClientInterface $client;
 
   /**
-   * @var \Http\Message\MessageFactory
+   * PSR-17 request factory.
+   *
+   * @var \Psr\Http\Message\RequestFactoryInterface
    */
-  protected $messageFactoryDiscovery;
+  protected $requestFactory;
 
-  public function __construct($client = NULL) {
+  /**
+   * PSR-17 stream factory.
+   *
+   * @var \Psr\Http\Message\StreamFactoryInterface
+   */
+  protected $streamFactory;
+
+  public function __construct($client = null) {
     $this->client = Config::clientFactory($client);
   }
 
@@ -41,7 +53,7 @@ abstract class Client {
   }
 
   /**
-   * @return null
+   * @return string
    * @throws \Exception
    */
   public function getMetod() {
@@ -53,25 +65,36 @@ abstract class Client {
 
   /**
    * @param array $headers
-   * @param null $data
+   * @param mixed $data
    *
    * @return mixed
    * @throws \Exception
    */
-  protected function request(array $headers = [], $data = NULL) {
+  protected function request(array $headers = [], $data = null) {
     $headers += [
       'X-Cargonizer-Key' => Config::get('secret'),
       'X-Cargonizer-Sender' => Config::get('sender'),
     ];
+
     try {
       // Build request.
-      /** @var \Psr\Http\Message\RequestInterface $request */
-      $request = $this->messageFactoryDiscovery()->createRequest(
-        $this->getMetod(),
-        Config::get('endpoint') . $this->getResource() . ($this->getMetod() == 'GET' && !empty($data) ? '?' . http_build_query($data) : NULL),
-        $headers,
-        $this->getMetod() == 'GET' ? NULL : $data
-      );
+      $request = $this->requestFactory()
+        ->createRequest(
+          $this->getMetod(),
+          Config::get('endpoint') . $this->getResource() . ($this->getMetod() === 'GET' && !empty($data) ? '?' . http_build_query($data) : '')
+        );
+
+      foreach ($headers as $name => $value) {
+        $request = $request->withHeader($name, $value);
+      }
+
+      if ($this->getMetod() !== 'GET' && $data !== null) {
+        $request = $request->withBody(
+          $this->streamFactory()->createStream(
+            is_string($data) ? $data : http_build_query($data)
+          )
+        );
+      }
       // Make a request.
       $response = $this->client->sendRequest($request);
       $content = $response->getBody()->getContents();
@@ -97,13 +120,23 @@ abstract class Client {
   }
 
   /**
-   * @return \Http\Message\MessageFactory
+   * @return \Psr\Http\Message\RequestFactoryInterface
    */
-  protected function messageFactoryDiscovery() {
-    if (!isset($this->messageFactory)) {
-      $this->messageFactory = MessageFactoryDiscovery::find();
+  protected function requestFactory() {
+    if (!isset($this->requestFactory)) {
+      $this->requestFactory = Psr17FactoryDiscovery::findRequestFactory();
     }
-    return $this->messageFactory;
+    return $this->requestFactory;
+  }
+
+  /**
+   * @return \Psr\Http\Message\StreamFactoryInterface
+   */
+  protected function streamFactory() {
+    if (!isset($this->streamFactory)) {
+      $this->streamFactory = Psr17FactoryDiscovery::findStreamFactory();
+    }
+    return $this->streamFactory;
   }
 
 }

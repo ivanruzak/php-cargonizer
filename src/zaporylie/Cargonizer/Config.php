@@ -2,9 +2,8 @@
 
 namespace zaporylie\Cargonizer;
 
-use Http\Client\HttpAsyncClient;
-use Http\Client\HttpClient;
-use Http\Discovery\HttpClientDiscovery;
+use Http\Discovery\Psr18ClientDiscovery;
+use Psr\Http\Client\ClientInterface;
 
 /**
  * Class Config
@@ -22,10 +21,10 @@ class Config
     'secret' => NULL,
   ];
 
-  private function __construct() {} // make this private so we can't instanciate
-  private function __wakeup() {} // make this private so we can't instanciate
+  public function __construct() {}
+  public function __wakeup() {}
 
-  public static function set($key, $val)
+  public static function set($key, $val): void
   {
     self::$config[$key] = $val;
   }
@@ -38,22 +37,24 @@ class Config
   /**
    * Use this static method to get default HTTP Client.
    *
-   * @param null|HttpClient|HttpAsyncClient $client
+   * @param \Psr\Http\Client\ClientInterface|null $client
    *
-   * @return HttpClient|HttpAsyncClient
+   * @return \Psr\Http\Client\ClientInterface
    */
-  public static function clientFactory($client = null)
+  public static function clientFactory(?ClientInterface $client = null): ClientInterface
   {
-    if (isset($client) && ($client instanceof HttpAsyncClient || $client instanceof HttpClient)) {
-      return $client;
-    } elseif (isset($client)) {
+    if ($client === null) {
+      return Psr18ClientDiscovery::find();
+    }
+
+    if (!$client instanceof ClientInterface) {
       throw new \LogicException(sprintf(
-        'HttpClient must be instance of "%s" or "%s"',
-        HttpClient::class,
-        HttpAsyncClient::class
+        'HTTP client must implement "%s".',
+        ClientInterface::class
       ));
     }
-    return HttpClientDiscovery::find();
+
+    return $client;
   }
 
 }
